@@ -1,0 +1,350 @@
+---
+title: "Naive Bayes"
+author: "Simone Brazzi"
+engine: knitr
+format:
+  html:
+    page-layout: full
+    toc: true
+    toc-depth: 3
+    toc-title: "Table of Contents"
+    toc_float:
+      collapsed: true
+      smooth_scroll: true
+    toc-location: left
+    toc-folding: hide
+    theme:
+      #dark: "darkly"
+      light: "flatly"
+    code-copy: true
+    code-link: true
+    smooth_scroll: true
+    embed-resources: true
+    self-contained-math: true
+  ipynb: default
+format-links: [ipynb]
+self_contained: true
+number-sections: true
+editor: 
+  markdown: 
+    wrap: sentence
+editor_options: 
+  chunk_output_type: console
+---
+
+```{python}
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+
+from sklearn.impute import SimpleImputer
+from sklearn.datasets import make_gaussian_quantiles
+from sklearn.preprocessing import MinMaxScaler, OrdinalEncoder
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+from sklearn.naive_bayes import GaussianNB, BernoulliNB, MultinomialNB, ComplementNB, CategoricalNB
+from sklearn.metrics import log_loss, classification_report, confusion_matrix
+```
+
+# Gaussian Naive Bayes
+
+## Dataset
+```{python}
+x, y = make_gaussian_quantiles(
+  n_features=1,
+  n_classes=2,
+  random_state=42
+)
+plt.scatter(np.arange(x.shape[0]), x,  c=y)
+plt.show()
+plt.close()
+```
+
+```{python}
+xtrain, xtest, ytrain, ytest = train_test_split(
+  x,
+  y,
+  test_size=.3,
+  random_state=42
+  )
+```
+
+## Logistic Regression
+```{python}
+lr = LogisticRegression()
+lr.fit(xtrain, ytrain)
+lr.score(xtest, ytest)
+```
+
+```{python}
+a = np.arange(x.shape[0])
+plt.scatter(a, x, c=y)
+plt.plot(a, a*lr.coef_[0] + lr.intercept_, c='red')
+plt.show()
+plt.close()
+```
+
+## Gaussian NB
+```{python}
+gnb = GaussianNB()
+gnb.fit(xtrain, ytrain)
+gnb.score(xtest, ytest)
+```
+
+```{python}
+yproba = gnb.predict_proba(xtest)
+log_loss(ytest, yproba)
+```
+
+# Bernoulli Naive Bayes
+
+## Dataset
+```{python}
+df = pd.read_csv("~/R/ProfAI_ML_models_algorithms/datasets/spam.csv", usecols=[1, 2])
+df.head()
+```
+
+```{python}
+class Config():
+  def __init__(self):
+    self.random_seed = 42
+    self.test_size = .3
+  
+  def build_vocab_double_for(self, corpus):
+    vocab = []
+    
+    for doc in corpus:
+      for word in doc.split():
+        if word not in vocab:
+          vocab.append(word.lower())
+    
+    return vocab
+  
+  def build_vocab_set(self, corpus):
+    vocab = set()
+    
+    for doc in corpus:
+      vocab = vocab.union(set(doc.lower().split()))
+    
+    return list(vocab)
+  
+  def binary_bow(self, corpus, vocab=None):
+    
+    if vocab is None:
+      vocab = self.build_vocab_set(corpus)
+    
+    vocab_size = len(vocab)
+    docs_bow = []
+    
+    for doc in corpus:
+      
+      doc_bow = [0]*vocab_size
+      for i in range(vocab_size):
+        doc_bow[i] = int(vocab[i] in doc)
+      
+      docs_bow.append(doc_bow)
+    
+    return docs_bow
+  
+  def multi_bow(self, corpus, vocab=None):
+    
+    if vocab is None:
+      vocab = self.build_vocab_set(corpus)
+    
+    vocab_size = len(vocab)
+    docs_bow = []
+    
+    for doc in corpus:
+      
+      doc_bow = [0]*vocab_size
+      for i in range(vocab_size):
+        doc_bow[i] = doc.count(vocab[i])
+      
+      docs_bow.append(doc_bow)
+    
+    return docs_bow
+  
+  def price_to_category(self, price):
+    
+    categories = ["very_cheap", "cheap", "average", "expensive", "very_expensive"]
+    
+    for i in range(1, 5):
+      if price < df.PRICE.quantile(.2*i):
+        return categories[i]
+    
+    return categories[-1]
+    
+
+config = Config()
+```
+
+```{python}
+corpus = ["Giuseppe è molto bravo", "Giuseppe non sa cosa scrivere", "È Giuseppe molto bello?"]
+
+vocab = config.build_vocab_double_for(corpus)
+vocab
+```
+
+```{python}
+vocab = config.build_vocab_set(corpus)
+vocab
+```
+
+```{python}
+bow = config.binary_bow(corpus)
+bow
+```
+
+```{python}
+sms_list = df.MESSAGE.tolist()
+sms_list[:5]
+```
+
+```{python}
+sms_bow = config.binary_bow(sms_list)
+sms_bow[:2]
+```
+
+```{python}
+len(sms_bow[0])
+```
+
+```{python}
+x = sms_bow
+y = df.SPAM.to_list()
+
+xtrain, xtest, ytrain, ytest = train_test_split(
+  x,
+  y,
+  test_size=config.test_size,
+  random_state=config.random_seed
+)
+```
+
+```{python}
+benb = BernoulliNB()
+benb.fit(xtrain, ytrain)
+report = classification_report(benb.predict(xtest), ytest)
+print(report)
+```
+
+# Multinomial Naive Bayes
+
+```{python}
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.naive_bayes import ComplementNB
+```
+
+
+## Dataset
+```{python}
+df = pd.read_csv("~/R/ProfAI_ML_models_algorithms/datasets/spam_unbalanced.csv", usecols=[1, 2])
+df.head()
+```
+
+```{python}
+df.SPAM.value_counts()
+```
+
+```{python}
+x = x.MESSAGE
+y = df.SPAM
+
+xtrain, xtest, ytrain, ytest = train_test_split(
+  x,
+  y,
+  test_size=config.test_size,
+  random_state=config.random_seed
+)
+```
+
+```{python}
+bow = CountVectorizer(
+  stop_words='english',
+  max_features=1000
+  )
+```
+
+```{python}
+xtrain = bow.fit_trainsform(xtrain)
+xtest = bow.transform(xtest)
+xtrain.shape
+```
+
+```{python}
+comNB = ComplementNB()
+comNB.fit(xtrain, ytrain)
+print(classification_report(ytest, comNB.predict(xtest)))
+```
+
+```{python}
+confusion_matrix(ytest, comNB.predict(xtest))
+```
+
+```{python}
+mnb = MultinomialNB()
+mnb.fit(xtrain, ytrain)
+print(classification_report(ytest, mnb.predict(xtest)))
+```
+
+```{python}
+confusion_matrix(ytest, mnb.predict(xtest))
+```
+
+# CategoricalNB
+
+## Dataset
+```{python}
+url = "https://raw.githubusercontent.com/ProfAI/machine-learning-fondamenti/main/datasets/"
+df = pd.read_csv(url + "housing.csv", usecols=["ZN", "CHAS", "RAD", "PRICE"])
+
+df.head()
+```
+
+```{python}
+df["PRICE"] = df.PRICE.apply(config.price_to_category)
+
+df.PRICE.value_counts()
+df.PRICE.isna().sum()
+```
+
+```{python}
+x = df.drop("PRICE", axis=1).values
+y = df.PRICE.values
+
+xtrain, xtest, ytrain, ytest = train_test_split(
+  x,
+  y,
+  test_size=config.test_size,
+  random_state=config.random_seed
+)
+```
+
+## Model
+
+```{python}
+#imputer = SimpleImputer(strategy='most_frequent')
+#xtrain = imputer.fit_transform(xtrain)
+#xtest = imputer.transform(xtest)
+```
+
+
+```{python}
+ordenc = OrdinalEncoder(handle_unknown="use_encoded_value", unknown_value=np.nan)
+xtrain = ordenc.fit_transform(xtrain)
+xtest = ordenc.transform(xtest)
+```
+
+```{python}
+gnb = GaussianNB()
+gnb.fit(xtrain, ytrain)
+gnb.score(xtest, ytest)
+```
+
+```{python}
+catnb = CategoricalNB()
+catnb.fit(xtrain, ytrain)
+catnb.score(xtest, ytest)
+```
+
+

@@ -1,0 +1,387 @@
+---
+title: "Gradient Descent Algorithm"
+author: "Simone Brazzi"
+engine: knitr
+format:
+  html:
+    page-layout: full
+    toc: true
+    toc-depth: 3
+    toc-title: "Table of Contents"
+    toc_float:
+      collapsed: true
+      smooth_scroll: true
+    toc-location: left
+    toc-folding: hide
+    theme:
+      #dark: "darkly"
+      light: "flatly"
+    code-copy: true
+    code-link: true
+    smooth_scroll: true
+    embed-resources: true
+    self-contained-math: true
+  ipynb: default
+format-links: [ipynb]
+self_contained: true
+number-sections: true
+editor: 
+  markdown: 
+    wrap: sentence
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{python}
+import pandas as np
+import numpy as np
+import matplotlib.pyplot as plt
+from time import time
+
+from sklearn.model_selection import train_test_split
+from sklearn.utils import shuffle
+from sklearn.metrics import mean_squared_error, r2_score
+```
+
+```{python}
+class Config():
+  def __init__(self):
+    
+    self.random_seed = 42
+    
+  def evaluate_regression(self, model, data):
+    
+    x, y = data
+    ypred = model.predict(x)
+    
+    print(f"MSE: {mean_squared_error(y, ypred)}")
+    print(f"R2: {r2_score(y, ypred)}")
+  
+  def evaluate_classification(self, model, data):
+    
+    x, y = data
+    ypred = model.predict(x)
+    
+    print(f"ACCURACY: {accuracy_score(y, ypred)}")
+    print(f"LOG LOSS: {log_loss(y, ypred)}")
+  
+  def train_history(self, losses, title):
+    plt.figure(figsize=(14, 10))
+    plt.title(title)
+    plt.xlabel("Iteration")
+    plt.ylabel("Log-Loss")
+    plt.plot(losses)
+
+config = Config()
+```
+
+
+# Regressione con il Gradient Descent
+
+## Import
+```{python}
+from sklearn.datasets import make_regression
+from sklearn.linear_model import SGDRegressor
+```
+
+## Dataset
+```{python}
+x, y = make_regression(
+  n_samples=100,
+  n_features=50,
+  bias=5,
+  noise=20,
+  random_state=config.random_seed
+)
+xtrain, xtest, ytrain, ytest = train_test_split(
+  x,
+  y,
+  test_size=.3,
+  random_state=config.random_seed
+)
+```
+
+## Model
+```{python}
+model = SGDRegressor(max_iter=1000)
+model.fit(xtrain, ytrain)
+```
+
+## Evaluate
+```{python}
+config.evaluate_regression(model, (xtrain, ytrain))
+```
+
+## Predict
+```{python}
+config.evaluate_regression(model, (xtest, ytest))
+```
+
+## Model 2
+```{python}
+model_2 = SGDRegressor(
+  max_iter=1000,
+  penalty="elasticnet",
+  alpha=.01,
+  l1_ratio=.9,
+  learning_rate="adaptive"
+  )
+model_2.fit(xtrain, ytrain)
+```
+
+## Evaluate 2
+```{python}
+config.evaluate_regression(model_2, (xtrain, ytrain))
+```
+
+## Predict 2
+```{python}
+config.evaluate_regression(model_2, (xtest, ytest))
+```
+
+## Model 3
+```{python}
+model_3 = SGDRegressor(
+  max_iter=5000,
+  penalty="elasticnet",
+  alpha=.01,
+  l1_ratio=.9
+  )
+model_3.fit(xtrain, ytrain)
+```
+
+## Evaluate 3
+```{python}
+config.evaluate_regression(model_3, (xtrain, ytrain))
+```
+
+## Predict 3
+```{python}
+config.evaluate_regression(model_3, (xtest, ytest))
+```
+
+# Classificazione con il Gradient Descent
+
+## Import
+```{python}
+from sklearn.datasets import make_classification
+from sklearn.metrics import accuracy_score, log_loss
+from sklearn.linear_model import SGDClassifier
+```
+
+## Dataset
+```{python}
+x, y = make_classification(
+  n_samples=100,
+  n_features=30,
+  n_informative=30,
+  n_redundant=0,
+  n_repeated=0,
+  n_classes=2,
+  random_state=config.random_seed
+)
+
+xtrain, xtest, ytrain, ytest = train_test_split(
+  x,
+  y,
+  test_size=.3,
+  random_state=config.random_seed
+)
+```
+
+## Model 1
+```{python}
+model_1 = SGDClassifier()
+model_1.fit(xtrain, ytrain)
+```
+
+## Evaluate 1
+```{python}
+config.evaluate_classification(model_1, (xtrain, ytrain))
+```
+
+## Predict 1
+```{python}
+config.evaluate_classification(model_1, (xtest, ytest))
+```
+
+## Model 2
+```{python}
+model_2 = SGDClassifier(
+  penalty="elasticnet",
+  alpha=.1,
+  l1_ratio=.9,
+)
+model_2.fit(xtrain, ytrain)
+```
+
+## Evaluate 2
+```{python}
+config.evaluate_classification(model_2, (xtrain, ytrain))
+```
+
+## Predict 2
+```{python}
+config.evaluate_classification(model_2, (xtest, ytest))
+```
+
+# Learning Rate Costante e Adattivo
+
+## Dataset
+```{python}
+x, y = make_regression(
+  n_samples=100,
+  n_features=50,
+  bias=5,
+  noise=20,
+  random_state=config.random_seed
+)
+xtrain, xtest, ytrain, ytest = train_test_split(
+  x,
+  y,
+  test_size=.3,
+  random_state=config.random_seed
+)
+```
+
+## Model
+```{python}
+model = SGDRegressor(
+  max_iter=5000,
+  penalty="elasticnet",
+  l1_ratio=.9,
+  alpha=.01,
+  learning_rate="constant",
+  eta0=10
+)
+model.fit(xtrain, ytrain)
+```
+
+## Evaluate
+```{python}
+config.evaluate_regression(model, (xtrain, ytrain))
+```
+
+## Predict
+```{python}
+config.evaluate_regression(model, (xtest, ytest))
+```
+
+# Mini Batch Gradient Descent con il Partial Fit
+
+## Import
+```{python}
+from sklearn.datasets import make_classification
+from sklearn.metrics import accuracy_score, log_loss
+from sklearn.linear_model import SGDClassifier
+```
+
+## Dataset
+```{python}
+x, y = make_classification(
+  n_samples=100,
+  n_features=30,
+  n_informative=30,
+  n_redundant=0,
+  n_repeated=0,
+  n_classes=2,
+  random_state=config.random_seed
+)
+
+xtrain, xtest, ytrain, ytest = train_test_split(
+  x,
+  y,
+  test_size=.3,
+  random_state=config.random_seed
+)
+```
+
+```{python}
+epochs = 5
+
+n_batches = xtrain.shape[0]
+batch_size = xtrain.shape[0]/n_batches
+
+classes = np.unique(ytrain)
+
+sgd = SGDClassifier(loss="log_loss")
+sgd_losses = []
+
+tick = time()
+
+for epoch in range(epochs):
+        xshuffled, yshuffled = shuffle(xtrain, ytrain)
+        for batch in range(n_batches):
+            batch_start = int(batch*batch_size)
+            batch_end = int((batch+1)*batch_size)
+            xbatch = xshuffled[batch_start:batch_end,:]
+            ybatch = yshuffled[batch_start:batch_end]
+
+            sgd.partial_fit(xbatch, ybatch, classes=classes)
+            loss = log_loss(ytest, sgd.predict_proba(xtest),labels=classes)
+            sgd_losses.append(loss)       
+        print("Loss all'epoca %d = %.4f" % (epoch+1, loss))
+
+print(f"Training time: {time()-tick:.3f}s")
+
+```
+
+# Training History
+
+```{python}
+config.train_history(sgd_losses, "Stochasting Gradient Descent")
+```
+
+# Early Stopping
+
+```{python}
+epochs = 70
+n_batches = 12
+batch_size = xtrain.shape[0]/n_batches
+
+tol = .0001
+n_iter_no_change = 5
+n_iter_count = 0
+
+best_loss = 1
+
+classes = np.unique(ytrain)
+
+sgd = SGDClassifier(loss="log_loss")
+sgd_losses = []
+
+tick = time()
+
+for epoch in range(epochs):
+  xshuffled, yshuffled = shuffle(xtrain, ytrain)
+  for batch in range(n_batches):
+    batch_start = int(batch*batch_size)
+    batch_end = int((batch+1)*batch_size)
+    xbatch = xshuffled[batch_start:batch_end,:]
+    ybatch = yshuffled[batch_start:batch_end]
+    sgd.partial_fit(xbatch, ybatch, classes=classes)
+    loss = log_loss(ytest, sgd.predict_proba(xtest),labels=classes)
+    sgd_losses.append(loss)
+    
+    if loss >= best_loss-tol:
+      if n_iter_count >= n_iter_no_change:
+        print("Early Stopping!")
+        break
+      
+      else:
+        n_iter_count += 1
+      
+    else:
+      best_loss = loss
+      n_iter_count = 0
+    
+    print("Loss all'epoca %d = %.4f" % (epoch+1, loss))
+
+
+print(f"Training time: {time()-tick:.3f}s")
+```
+
+```{python}
+config.train_history(sgd_losses, "Stochasting Gradient Descent with Early Stopping")
+```
+
