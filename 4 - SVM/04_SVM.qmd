@@ -1,0 +1,689 @@
+---
+title: "Support Vector Machine"
+author: "Simone Brazzi"
+engine: knitr
+format:
+  html:
+    page-layout: full
+    toc: true
+    toc-depth: 3
+    toc-title: "Table of Contents"
+    toc_float:
+      collapsed: true
+      smooth_scroll: true
+    toc-location: left
+    toc-folding: hide
+    theme:
+      #dark: "darkly"
+      light: "flatly"
+    code-copy: true
+    code-link: true
+    smooth_scroll: true
+    embed-resources: true
+    self-contained-math: true
+  ipynb: default
+format-links: [ipynb]
+self_contained: true
+number-sections: true
+editor: 
+  markdown: 
+    wrap: sentence
+editor_options: 
+  chunk_output_type: console
+---
+
+# Import
+
+```{r}
+library(tidyverse, verbose = FALSE)
+library(ggplot2)
+library(reticulate)
+
+# renv::use_python("/Users/simonebrazzi/venv/ml/bin/python")
+```
+
+# Theory
+
+This type of model is useful whene there are few data.
+
+**SVC** is a type of supervised ML classificator.
+It maximize the distance between classes.
+It is useful whene there are overlaps.
+
+:::{.collout.important}
+THE SVM maximize the distance between the support vectors and the decision boundary.
+:::
+
+## Maximal margin Classifier
+
+This is a type of classifier which uses the 2 observation of the 2 classes which are **closer**.
+It is weak to outliers.
+It works correctly if values are distant.
+
+```{r}
+set.seed(42)
+
+x <- seq(1, 8, 1)
+
+y1 <- x + runif(8, 0, 3)
+y2 <- x - runif(8, 0.5, x - 0.1)
+
+
+df <- tibble(
+  x = x,
+  y1 = y1,
+  y2 = y2
+)
+
+ggplot(df) +
+  geom_line(aes(x = x, y = x)) +
+  geom_point(aes(x = x, y = y1, colour = "red")) +
+  geom_point(aes(x = x, y = y2, colour = "blue")) +
+  theme_minimal()
+```
+
+## SVC
+
+It allows **soft margins**, meaning it accept mistakes.
+The margins are created using **support vectors** (values).
+How are they choose?
+This happens during the training, choosing the best values which led to less mistakes.
+
+The logistic regression learns from the most rappresentative examples.
+The SVM learns from the most promiscuous examples.
+
+![Example of SVM](IMG_DC22CCFD12F3-1.jpeg) Outliers, meaning cats which are cats and tiger which seems tiger, will not affect the model.
+
+## SVC training
+
+It requires deep knowledg of optimization algorithm.
+Just bear in mind that it **calculate the similarity between each example in the train set**.
+
+## PROs
+
+-   Robust to outliers.
+-   Good results with few data
+-   Efficient with high dimensionality spaces.
+-   Low computational requirements.
+
+Still used for face detection in photography.
+
+SVC are particularly useful when the number of features is greater then the number of observations.
+
+Use it when:
+
+-   Lots of outliers.
+-   Few observations.
+-   Lots of features.
+-   Low computational power.
+
+Avoid it when:
+
+-   Lots of noise.
+-   Lots of observations.
+
+# SVC and Non Linear Relations
+
+Even if the SVC are linear models, they can be used with non linear relations with the SVM.
+SVM projects data in a higher dimensional space and looks for the best SVC in this space.
+
+::: callout-note
+Mapping could be computational demanding or impossible!
+There is still a solution.
+:::
+
+# Kernel and Kernel Trick
+
+The kernel function measures the similarity/distance between 2 observations or classes.
+
+$$
+k(x, z) = \langle \phi(x), \phi(x) \rangle
+$$
+
+The **kernel trick** lets calculate the similarity in a higher dimensional space, mantaining the observation in the original dimensional space.
+
+$x_i$ features vector.
+$y_i$ label.
+$(x_i, y_i)$
+
+The kernel trick maps data in an higher dimension space with the function $k(x^a, x^b)$.
+This mapping gets the linear separation in the new feature space, even if data are not in the original one.
+
+The function *k* calculates the **scalar product** between vectors $x^a$ and $x^b$ in the higher dimensional space.
+This product is a measure of similarity of $x^a$ and $x^b$ after the projection.
+The **cosine similarity** is calculated using the scalar product.
+
+::: callout-note
+checks documents
+:::
+
+Rewriting the optimization problem as a scalar product between the vectors of the features:
+
+$$
+\max \limits_\alpha \sum_{i=1}^{N}{a_i} - \frac{1}{2}\sum_{i, j = 1}^{N}{y_iy_j\alpha_i\alpha_jk(x_i,x_j)}
+$$ limited to
+
+$$
+\sum_{i=1}^{N}{\alpha_iy_i} = 0, \ (0 \leq \alpha_i \leq C)\ for (i = 1, ..., N)
+$$
+
+::: callout-note
+The optimization depends only on the combinations of data between the scalar product
+
+$$
+k(x_i, x_j)
+$$
+
+and not on the values of the features $x_i$ and $x_j$.
+This means we don't need to know explicitly the mapping function or to calculate the new features in the new space.
+
+The mapping is not required, is just simulated: this is the trick!
+:::
+
+The linear separation in the new space depend only on the similarity after the projection.
+We can find the support vectors and define the separation hyperplane using only the scalar product defined with the kernel.
+
+## Type of kernels
+
+It is an hyperparameter to be defined with CV.
+
+### Linear
+
+Simpler, used when data are already linearly separable in the original space.
+
+$$
+K(a, b) = \langle a, b \rangle
+$$
+
+### Polinomial kernel
+
+Data can be separated by a curved hyperplane. It can model non linear relations between the features.
+
+$$
+K(a, b) = (\gamma \langle a, b \rangle + r)^d
+$$
+
+### Gaussian kernel or Radial basis function
+
+It can model differents separation forms because it can simulate on an infinite hyperplanes.
+
+$$
+K(a, b) = e^{- \gamma ||a-b||^2}
+$$
+
+:::{.collout-not}
+It works best with **non linear separable** data.
+:::
+
+### Sigmoidal kernel
+
+It is useful if the data coould be modeled after a sigmoidal function.
+
+$$
+K(a, b) = tanh(\gamma \langle a, b \rangle + r)
+$$
+
+::: callout-note
+$\gamma$ is an hyperparameter which represent the influence of the width of the top of the kernel function.
+
+Simply put, controls how much each observation impacts on the nearby ones in the separation decision.
+
+It lets balance **bias** and **variance**, so under and over fitting.
+:::
+
+# Practice
+
+## Create a Maximal Margin Separating Hyperplane
+
+```{python}
+import matplotlib.pyplot as plt
+from sklearn.datasets import make_blobs
+
+random_seed = 6
+```
+
+```{python}
+x, y = make_blobs(
+  n_samples=40,
+  centers=2,
+  random_state=random_seed
+)
+```
+
+```{python}
+plt.scatter(x[:, 0], x[:, 1], c=y, s=30, cmap=plt.cm.Paired)
+plt.show()
+```
+
+We have to find the hyperplane which best separate these points. We are going to use an SVM, because the MMC is too simple and it is not implemented.
+
+```{python}
+from sklearn.svm import SVC
+
+svc = SVC(kernel="linear")
+
+svc.fit(x, y)
+```
+
+## Soft margins
+
+Lets plot the soft margins.
+
+```{python}
+from sklearn.inspection import DecisionBoundaryDisplay
+
+plt.close()
+plt.scatter(x[:, 0], x[:, 1], c=y, s=30, cmap=plt.cm.Paired)
+ax = plt.gca()
+DecisionBoundaryDisplay.from_estimator(
+  svc,
+  x,
+  ax=ax,
+  alpha=0.5
+  )
+plt.show()
+```
+
+But we want just the margins! This graph shows the probability of a class.
+
+```{python}
+plt.close()
+plt.scatter(x[:, 0], x[:, 1], c=y, s=30, cmap=plt.cm.Paired)
+ax = plt.gca()
+DecisionBoundaryDisplay.from_estimator(
+  svc,
+  x,
+  ax=ax,
+  alpha=0.5,
+  plot_method="contour",
+  levels=[-1, 0, 1],
+  linestyles=["--", "-", "--"],
+  colors="k"
+  )
+
+plt.show()
+```
+
+These are the soft margins. The support vectors are the observatoins with dashed lines.
+
+It is possible to get the (x, y) coordinates of the support vectors.
+
+```{python}
+svc.support_vectors_
+```
+
+So we can do
+
+```{python}
+plt.close()
+plt.scatter(x[:, 0], x[:, 1], c=y, s=30, cmap=plt.cm.Paired)
+ax = plt.gca()
+DecisionBoundaryDisplay.from_estimator(
+  svc,
+  x,
+  ax=ax,
+  alpha=0.5,
+  plot_method="contour",
+  levels=[-1, 0, 1],
+  linestyles=["--", "-", "--"],
+  colors="k"
+  )
+
+ax.scatter(
+  svc.support_vectors_[:, 0],
+  svc.support_vectors_[:, 1],
+  s=100,
+  linewidth=1,
+  facecolors="none",
+  edgecolor="k"
+)
+
+plt.show()
+```
+
+This is our plot to visualize the SVC model. It maximize the margin between these two classes. This was easy, because there are not overlaps.
+
+## Linear SVM
+
+```{python}
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.inspection import DecisionBoundaryDisplay
+from sklearn.datasets import make_classification
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import classification_report
+
+from sklearn.svm import LinearSVC
+
+random_seed = 0
+```
+
+```{python}
+def plot_data(data):
+  
+  plt.close()
+  
+  x, y = data
+  
+  plt.scatter(x[:, 0], x[:, 1], c=y, s=30, cmap=plt.cm.Paired)
+  
+  plt.show()
+  
+
+def plot_softmargin(model, data, show_sv=False):
+  
+  plt.close()
+  x, y = data
+  plt.scatter(x[:, 0], x[:, 1], c=y, s=30, cmap=plt.cm.Paired)
+  ax = plt.gca()
+  DecisionBoundaryDisplay.from_estimator(
+    model,
+    x,
+    ax=ax,
+    alpha=0.5,
+    plot_method="contour",
+    levels=[-1, 0, 1],
+    linestyles=["--", "-", "--"],
+    colors="k"
+    )
+  
+  if show_sv == True:
+    ax.scatter(
+      model.support_vectors_[:, 0],
+      model.support_vectors_[:, 1],
+      s=100,
+      linewidth=1,
+      facecolors="none",
+      edgecolor="k"
+      )
+  plt.show()
+
+def print_classification_report(model, data):
+  
+  x, y = data
+  
+  ypred = model.predict(x)
+  
+  cr = classification_report(ypred, y)
+  print(cr)
+```
+
+```{python}
+x, y = make_classification(
+  n_samples=100,
+  n_features=2,
+  n_informative=2,
+  n_redundant=0,
+  n_repeated=0,
+  n_classes=2,
+  random_state=random_seed
+)
+```
+
+```{python}
+plot_data((x, y))
+```
+
+Let see how the SVM can get the hyperplane which can handle this overlap.
+
+```{python}
+xtrain, xtest, ytrain, ytest = train_test_split(
+  x, y,
+  test_size=.3,
+  random_state=random_seed
+)
+
+svc = LinearSVC()
+svc.fit(xtrain, ytrain)
+```
+
+```{python}
+print_classification_report(svc, (xtest, ytest))
+```
+
+The model is performing well enough. Lets plot the hyperplane.
+
+```{python}
+plot_softmargin(svc, (xtrain, ytrain), show_sv=False)
+```
+
+If I want to see the support kernel again, I just need to use the `SVC` model with a *linear kernel*.
+
+```{python}
+svc = SVC(kernel="linear")
+svc.fit(xtrain, ytrain)
+plot_softmargin(svc, (xtrain, ytrain), show_sv=True)
+```
+
+## Outliers removal
+
+
+There is only one important outlier.
+```{python}
+np.sum(xtrain[:, 0] >3.5)
+```
+
+```{python}
+outlier_index = np.where(xtrain[:, 0] > 3.5)
+outlier_index
+```
+
+```{python}
+xtrain_clean = np.delete(xtrain, outlier_index, axis=0)
+ytrain_clean = np.delete(ytrain, outlier_index, axis=0)
+```
+
+```{python}
+xtrain.shape, xtrain_clean.shape
+```
+
+```{python}
+svc = SVC(kernel="linear")
+svc.fit(xtrain_clean, ytrain_clean)
+print_classification_report(svc, (xtest, ytest))
+```
+
+Metric wise nothing changed. Plot wise...
+
+```{python}
+plot_softmargin(svc, (xtrain_clean, ytrain_clean), show_sv=True)
+```
+
+No outlier!
+
+## Outliers removal
+
+A way to remove outliers is to use the **z-score**.
+
+```{python}
+from scipy import stats
+```
+
+```{python}
+outlier_map = np.abs(stats.zscore(xtrain)) < xtrain.std(axis=0)
+outlier_map
+```
+
+We get 2 columns: if we have at least one False in a row, we have to remove it.
+
+```{python}
+outlier_mask = outlier_map[:, 0] & outlier_map[:, 1]
+outlier_mask
+```
+
+Now we can filter xtrain.
+
+```{python}
+xtrain3 = xtrain[outlier_mask]
+ytrain3 = ytrain[outlier_mask]
+
+xtrain3.shape
+```
+
+Now we can retrain the model
+```{python}
+svc = SVC(kernel="linear")
+svc.fit(xtrain3, ytrain3)
+print_classification_report(svc, (xtest, ytest))
+```
+
+```{python}
+plot_softmargin(svc, (xtrain3, ytrain3), show_sv=True)
+```
+
+The metrics don't change, but there are not the outliers.
+
+## Other kernels
+
+```{python}
+from sklearn.datasets import make_circles
+
+x, y = make_circles(noise=.2, factor=.5, random_state=random_seed)
+plt.close()
+plt.scatter(x[:, 0], x[:, 1], c=y)
+plt.show()
+```
+
+```{python}
+xtrain, xtest, ytrain, ytest = train_test_split(x, y, test_size=.3, random_state=random_seed)
+```
+
+```{python}
+def plot_decision_boundary(model, train_set, test_set, sv=None):
+        
+    #plt.figure(figsize=figsize)
+        
+    if(model):
+        X_train, Y_train = train_set
+        X_test, Y_test = test_set
+        X = np.vstack([X_train, X_test])
+        x_min, x_max = X[:, 0].min() - .5, X[:, 0].max() + .5
+        y_min, y_max = X[:, 1].min() - .5, X[:, 1].max() + .5
+
+        xx, yy = np.meshgrid(np.arange(x_min, x_max, .02),
+                             np.arange(y_min, y_max, .02))
+
+        if hasattr(model, "predict_proba"):
+            Z = model.predict_proba(np.c_[xx.ravel(), yy.ravel()])[:, 1]
+        else:
+            Z = model.predict(np.c_[xx.ravel(), yy.ravel()])
+            
+        Z = Z.reshape(xx.shape)
+
+        plt.contourf(xx, yy, Z, alpha=.8)
+
+    plt.scatter(X_train[:,0], X_train[:,1], c=Y_train)
+    plt.scatter(X_test[:,0], X_test[:,1], c=Y_test, alpha=0.6)
+    
+    if sv is not None:
+      plt.scatter(sv[:, 0], sv[:, 1], facecolors="none", edgecolor='white', s=100)
+
+    plt.show()
+```
+
+### Linear kernerl
+
+```{python}
+from sklearn.svm import SVC
+```
+
+:::{.callout-note}
+We can set `probability=True` to also get the probability.
+:::
+
+
+```{python}
+svc = SVC(
+  kernel="linear",
+  probability=True
+  )
+svc.fit(xtrain, ytrain)
+print_classification_report(svc, (xtest, ytest))
+```
+
+The model is random guessing and underperforming.
+
+```{python}
+plot_decision_boundary(svc, (xtrain, ytrain), (xtest, ytest), sv=svc.support_vectors_)
+```
+
+This is a simple linear model which separate in half.
+The transparent data are test, the circled ones the train.
+
+### Polynomial kernel
+
+```{python}
+svc = SVC(kernel="poly")
+svc.fit(xtrain, ytrain)
+print_classification_report(svc, (xtest, ytest))
+```
+
+```{python}
+plot_decision_boundary(svc, (xtrain, ytrain), (xtest, ytest), sv=svc.support_vectors_)
+```
+
+Now we have 2 distinct colors, because we don't use the probability.
+
+```{python}
+svc = SVC(kernel="poly", probability=True)
+svc.fit(xtrain, ytrain)
+print_classification_report(svc, (xtest, ytest))
+```
+
+```{python}
+plot_decision_boundary(svc, (xtrain, ytrain), (xtest, ytest), sv=svc.support_vectors_)
+```
+
+The model is working better, but there is always a purple/yellow separation. It is still not a good enough kernel.
+
+### Sigmoidal kernel
+
+```{python}
+def test_kernel(kernel, probability):
+  
+  svc = SVC(kernel=kernel, probability=probability)
+  svc.fit(xtrain, ytrain)
+  print_classification_report(svc, (xtest, ytest))
+  plot_decision_boundary(svc, (xtrain, ytrain), (xtest, ytest), sv=svc.support_vectors_)
+```
+
+```{python}
+test_kernel("sigmoid", True)
+```
+
+The sigmoid kernel is performing poorly and it is expected.
+
+### Gaussina or RBF kernel
+
+```{python}
+test_kernel("rbf", True)
+```
+
+As expected from theory, it is the best one.
+
+The support vectors are the one in the outside of the yellow class.
+
+:::{.callout.warning}
+Much of the effort is not coding the model, but define or search the best model, according to the distribution of our data.
+:::
+
+
+# Exercise
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
