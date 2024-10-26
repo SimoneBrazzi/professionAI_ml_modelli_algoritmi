@@ -347,4 +347,137 @@ catnb.fit(xtrain, ytrain)
 catnb.score(xtest, ytest)
 ```
 
+# Exercise
+
+## Solution
+
+Classify spam and ham emails.
+
+```{python}
+import pandas as pd
+import numpy as np
+
+from sklearn.model_selection import train_test_split
+from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
+from sklearn.naive_bayes import BernoulliNB, MultinomialNB, ComplementNB
+from sklearn.metrics import log_loss, classification_report, confusion_matrix
+```
+
+```{python}
+df = pd.read_csv("~/R/ProfAI_ML_models_algorithms/datasets/kaggle_spam.csv", encoding="ISO-8859-1")
+df.head()
+df.columns
+
+df = df[["v1", "v2"]]
+df = df.rename(columns={
+  "v2" : "message",
+  "v1" : "spam"
+})
+
+class_encoding = {"spam" : 1, "ham" : 0}
+df["spam"] = df.spam.map(lambda x : class_encoding[x])
+
+
+x = df.message.values
+y = df.spam.values
+
+xtrain, xtest, ytrain, ytest = train_test_split(
+  x,
+  y,
+  test_size=.3,
+  random_state=42
+)
+
+xtrain.shape, xtest.shape
+```
+
+### Bernouli NB
+
+We can use the HashingVectorizer to convert a collection of text to a matrix of the frequency of each token.
+
+```{python}
+from sklearn.feature_extraction.text import HashingVectorizer
+
+enc = HashingVectorizer(n_features=1000, stop_words="english")
+xtrain_enc = enc.fit_transform(xtrain)
+xtest_enc = enc.transform(xtest)
+
+xtrain_enc[0, :]
+```
+
+It is a np.array.
+
+```{python}
+xtrain_enc[0, :].toarray()
+```
+
+```{python}
+bnb = BernoulliNB()
+bnb.fit(xtrain_enc, ytrain)
+print(classification_report(ytest, bnb.predict(xtest_enc)))
+```
+
+The model has a very good performance of .96. Lets try to get a better result.
+
+### Multinomial NB
+
+We need the counting of each word.
+
+```{python}
+enc = CountVectorizer(max_features=1000, stop_words="english")
+xtrain_count = enc.fit_transform(xtrain)
+xtest_count = enc.transform(xtest)
+
+mnb = MultinomialNB()
+mnb.fit(xtrain_count, ytrain)
+print(classification_report(ytest, mnb.predict(xtest_count)))
+```
+
+###
+
+Big mistake! Is the dataset strongly unbalanced?
+
+```{python}
+np.unique(y, return_counts=True)
+```
+
+Yes, it is! This means it is useful to test the following model.
+
+### Complement Naive Bayes
+
+It is a variant of the MultinomialNB useful when data are unbalanced.
+
+```{python}
+enc = CountVectorizer(max_features=1000, stop_words="english")
+xtrain_count = enc.fit_transform(xtrain)
+xtest_count = enc.transform(xtest)
+
+cnb = ComplementNB()
+cnb.fit(xtrain_count, ytrain)
+print(classification_report(ytest, cnb.predict(xtest_count)))
+```
+
+It is important to always test the CNB when there are unbalanced classes.
+
+### Test the model on spam mails
+
+```{python}
+def is_spam(text):
+  """
+  function which returns if spam.
+  """
+  
+  # CountVectorizer to vectorize
+  text_enc = enc.transform([text]) # always a vector
+  pred = mnb.predict(text_enc)[0]
+  
+  return pred == 1
+
+is_spam("Sex crypto air, water")
+is_spam("Sex sex sex")
+```
+
+
+
+
 

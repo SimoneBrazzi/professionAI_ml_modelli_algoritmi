@@ -1,0 +1,593 @@
+---
+title: "Neural Networks"
+author: "Simone Brazzi"
+engine: knitr
+format:
+  html:
+    page-layout: full
+    toc: true
+    toc-depth: 3
+    toc-title: "Table of Contents"
+    toc_float:
+      collapsed: true
+      smooth_scroll: true
+    toc-location: left
+    toc-folding: hide
+    theme:
+      dark: "darkly"
+      light: "flatly"
+    code-copy: true
+    code-link: true
+    smooth_scroll: true
+    embed-resources: true
+    self-contained-math: true
+  ipynb: default
+format-links: [ipynb]
+self_contained: true
+number-sections: true
+editor: 
+  markdown: 
+    wrap: sentence
+editor_options: 
+  chunk_output_type: console
+---
+
+# Theory
+
+## The Perceptron
+
+Bio inspired model, the brain neurons.
+The functioning is different, be aware!
+
+The **neuron** is the transistor of the brain.
+
+[Neural Network](neural_network.png)
+
+-   **x** -\> input layer or action potential.
+-   **node** -\> activatio function gets the threshold value.
+
+This is the **perceptron**
+
+\$\$ z = \sum x_i\*w_i \newline
+
+y = \phi(z) \$\$
+
+## Activation Function
+
+This are what makes possibile to get non linear or complex relations in data.
+
+### Step functions
+
+[Step Function](step_function.png)
+
+\$\$ \phi(x) = \left{
+
+\begin{array}{rcl}
+
+{1} & \mbox{if} & z \ge 0 \\
+{0} & \mbox{if} & z < 0
+
+\end{array}
+
+\right.
+\$\$
+
+## Sigmoid
+
+```{r}
+library(tidyverse)
+sigmoid <- function(z){
+  1 / (1 + exp(-z))
+}
+
+x = seq(-10, 10, 1)
+y = sigmoid(x)
+
+x
+y
+
+
+df <- tibble(x = x, y = y)
+ggplot(df, aes(x, y)) +
+  geom_line() +
+  theme_minimal()
+
+```
+
+$$
+\phi(z) = \frac{1}{1+e^{-z}}
+$$
+
+It lets compress a value betwene \[0, 1\], as a probability.
+
+### ReLU
+
+```{r}
+library(tidyverse)
+
+relu <- function(z) {
+  pmax(0, z)
+}
+
+x <- seq(-10, 10, 1)
+y <- relu(x)
+df <- tibble(x = x, y = y)
+ggplot(df, aes(x, y)) +
+  geom_line() +
+  theme_minimal()
+```
+
+$$
+\phi(z) = \max(0, z)
+$$
+
+### tanh
+
+hyperbolic tangent.
+It different from the sigmoid because values are between \[-1, 1\].
+
+```{r}
+library(tidyverse)
+
+tanh <- function(z){
+  (1 - exp(-2*z)) / (1 + exp(-2*z))
+}
+
+x <- seq(-10, 10, 1)
+y <- tanh(x)
+df <- tibble(x = x, y = y)
+ggplot(df, aes(x, y)) +
+  geom_line() +
+  theme_minimal()
+```
+
+$$
+\phi(z) = \frac{1-e^{-2z}}{1 + e^{-2z}}
+$$
+
+Typically the **perceptron** uses the **step function**.
+If we use the **sigmoid**, we have the **logistic regression**.
+
+## Multilayer Perceptron
+
+**Vanilla Neural Network**.
+It is and ensembled model, meaning it is composed from lots of perceptron.
+It is the most know example.
+
+[Multilayer Perpectron](multilayer_perceptron.png)
+
+### Input layer
+
+Normalized features.
+Each feature is associated with a weight and return an output.
+This is a simple perceptron.
+If you do this with different weights, you obtain differents outputs.
+
+[Input Layer](input_layer.png)
+
+Each outputs now is an input for the logistic regression.
+Each new input is multiplied by its weight.
+
+### Hidden layer
+
+The NN use the input features to create new ones which are more usefule.
+This is **feature engineering** done by the NN instead of by the data scientist.
+
+these new features are used to obtain the output layer.
+
+### What's the problem?
+
+The **hyperparameters** has to be optimized.
+For example, the number of nodes and how many nodes in the model has to be optimized, with the risk of overfitting.
+
+### Deep Learning
+
+Deep Neural Networks, meaning lots of layers or lots of perceptron.
+
+The activation function lets everything works, otherwise it is just multiplication and summation.
+The activation function lets implement non linearity.
+
+The most used ones are the **relu** for the hidden layers.
+For the output layer: - **sigmoid** for a binary classification.
+- **softmax** for a multi class classification.
+- **identity** for a linear regressoin.
+
+[Activation Functions to Use](activation_functions.png)
+
+### Pros and Cons
+
+**PROs** - It learns complex relations.
+- The more data the better performance.
+
+**CONs** - It needs lots of data.
+- Computational savvy.
+- Lots of hyperparameters.
+- The more complex the NN the more it is hard to explain.
+
+### When to use MLP
+- Simpler models don't work.
+- You uhave lots of data.
+- New data flow over time to improve the model.
+- Lots of computational power.
+- Model explainability is not the most important point.
+
+## How a MLP is Trained
+
+Optimization algorithm:
+
+- Gradient Descent.
+- RProp and RMProp
+- Adadelta
+- AdaGrad
+- AdaMax
+- ADAM
+
+[Optimization](optimization_algorithm.png)
+
+In a DNN, the gigantic number of weights complicates the process. How much a single weight inluence the error is not as simple.
+The algorithm used for this is the **backpropagation**: whilst the model calculate the prediction with the **forwardpropagation**, the error is used to to how much each layer influce the error. This information is expressed as a weight update.
+
+## Universarl Approximation Theorem
+
+An MLP with a single hidden layer and a big enough number of perceptron can approximate every continuous function with every precision level.
+This is true if:
+- It approximate a **continuous function**.
+- The activation funcion is the right one.
+
+
+:::{.callout-warning}
+not just the ones with one hidden layer, but all the MLP have this property.
+
+MLP as an **universal approximation** of a continuous function.
+:::
+
+# Practice
+
+## Dataset
+```{python}
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.model_selection import train_test_split
+from sklearn.datasets import make_moons
+
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+
+def plot_decision_boundary(model, train_set, test_set, sv=None):
+        
+    #plt.figure(figsize=figsize)
+        
+    if(model):
+        X_train, Y_train = train_set
+        X_test, Y_test = test_set
+        X = np.vstack([X_train, X_test])
+        x_min, x_max = X[:, 0].min() - .5, X[:, 0].max() + .5
+        y_min, y_max = X[:, 1].min() - .5, X[:, 1].max() + .5
+
+        xx, yy = np.meshgrid(np.arange(x_min, x_max, .02),
+                             np.arange(y_min, y_max, .02))
+
+        if hasattr(model, "predict_proba"):
+            Z = model.predict_proba(np.c_[xx.ravel(), yy.ravel()])[:, 1]
+        else:
+            Z = model.predict(np.c_[xx.ravel(), yy.ravel()])
+            
+        Z = Z.reshape(xx.shape)
+
+        plt.contourf(xx, yy, Z, alpha=.8)
+
+    plt.scatter(X_train[:,0], X_train[:,1], c=Y_train)
+    plt.scatter(X_test[:,0], X_test[:,1], c=Y_test, alpha=0.6)
+    
+    if sv is not None:
+      plt.scatter(sv[:, 0], sv[:, 1], facecolors="none", edgecolor='white', s=100)
+
+    plt.show()
+```
+
+```{python}
+random_seed = 0
+
+x, y = make_moons(n_samples=100, noise=.25, shuffle=True, random_state=random_seed)
+
+plt.scatter(x[:, 0], x[:, 1], c=y)
+plt.show()
+```
+
+
+## Preprocessing
+
+```{python}
+xtrain, xtest, ytrain, ytest = train_test_split(
+  x, y,
+  test_size=.2,
+  random_state=random_seed
+)
+```
+
+```{python}
+mms = MinMaxScaler()
+xtrain= mms.fit_transform(xtrain)
+xtest = mms.transform(xtest)
+
+xtrain.min(), xtrain.max()
+```
+
+## Models
+
+### Perceptron
+
+Simplest method
+
+```{python}
+from sklearn.linear_model import Perceptron
+```
+
+Most of the parameters are the same of a linear regression. What is different is the activation function: in the linear regression is the sigmoid, here is the step function.
+
+```{python}
+perceptron = Perceptron()
+perceptron.fit(xtrain, ytrain)
+perceptron.score(xtest, ytest)
+```
+
+:::{.callout.note}
+`Perceptron` has the `.score()` method, not the `evaluate()`.
+:::
+
+Even if the score is high, it is better to check the decision boundary.
+
+```{python}
+plt.close()
+plot_decision_boundary(perceptron, (xtrain, ytrain), (xtest, ytest))
+```
+
+The separation is clean: the perceptron output is 0/1, because it is using the **step function**. So, the model is not performing as we want.
+
+### Logistic Regression
+
+```{python}
+from sklearn.linear_model import LogisticRegression
+```
+
+Most of the parameters are the same of the Perceptron, so the class separation is expected to be similar.
+
+```{python}
+lr = LogisticRegression()
+lr.fit(xtrain, ytrain)
+lr.score(xtest, ytest)
+```
+
+```{python}
+plot_decision_boundary(lr, (xtrain, ytrain), (xtest, ytest))
+```
+
+The sigmoid return the probability of the class. Ignoring it, the main discrimination is almost the same of the Perceptron. This is confirmed by the 0.85 accuracy and the bias intercept on the y axis.
+
+### Multilayer perceptron
+
+```{python}
+from sklearn.neural_network import MLPClassifier
+```
+
+The `hidden_layer_sizez` accept a tuple, but with a comma at the end.
+
+```{python}
+mlp = MLPClassifier(
+  hidden_layer_sizes=(100, 100, 100,),
+  random_state=42
+)
+mlp.fit(xtrain, ytrain)
+mlp.score(xtest, ytest)
+```
+
+```{python}
+plot_decision_boundary(mlp, (xtrain, ytrain), (xtest, ytest))
+```
+
+The model is much more able to capture the non linearity, so much so that the probabilities are concentraded close to the separation line.
+
+### Layer exploration
+
+This is useful to check why a MLP is so complicated.
+
+```{python}
+type(mlp.coefs_)
+len(mlp.coefs_)
+```
+
+The len depends on input + 3 hidden layers.
+
+THe weights between input and first hidden layer.
+```{python}
+mlp.coefs_[0]
+```
+
+Whilst the bias are
+
+```{python}
+mlp.intercepts_[0]
+```
+
+```{python}
+weights = 0
+for i in range(len(mlp.coefs_)):
+  
+  coefs = mlp.coefs_[i].size #.shape[0 as np.arrays]
+  bias = mlp.intercepts_[i].size
+  
+  tot = coefs+bias
+  
+  print(f"Layer {i} => Weights {coefs} Bias {bias} Totale {tot}")
+  
+  weights += tot
+
+print(f"Total coefficients of the NN {weights}")
+```
+
+Layer 0: 200 weights, 100 bias. 2 features, 100 neurons.
+Layer 1/2: 100 neurons connected to 100 neurons, with 100 bias. 10100.
+Layer 3: 100 neurons connected to 1 output, 1 bias, 101.
+
+:::{.callout.warning}
+The best practice is Tensorflow/Keras or PyTorch.
+:::
+
+## Activation function
+
+Lets remove it with the identity function.
+
+```{python}
+mlp = MLPClassifier(
+  hidden_layer_sizes=(100,)*10,
+  activation="identity",
+  random_state=random_seed
+)
+mlp.fit(xtrain, ytrain)
+mlp.score(xtest, ytest)
+```
+
+```{python}
+plot_decision_boundary(mlp, (xtrain, ytrain), (xtest, ytest))
+```
+
+The score is 0.85. Removing th activation function removes all capability of found relations in the data. The only calculation are summation and multiplication
+
+# Exercise
+
+```{python}
+import pandas as pd
+import numpy as np
+from sklearn.datasets import load_digits
+from sklearn.model_selection import train_test_split
+from sklearn.neural_network import MLPClassifier
+
+df = load_digits(n_class=10, as_frame=True)
+dir(df)
+x = df.data
+y = df.target
+
+xtrain, xtest, ytrain, ytest = train_test_split(x, y, test_size=.3, random_state=42)
+```
+
+```{python}
+from sklearn.preprocessing import MinMaxScaler
+
+mms = MinMaxScaler()
+xtrain = mms.fit_transform(xtrain)
+xtest = mms.transform(xtest)
+```
+
+Sklearn understand when the classification is multi class.
+```{python}
+mlp = MLPClassifier(
+  hidden_layer_sizes=(512, 256, 128),
+  activation="relu",
+  solver='adam',
+  alpha=0.0001,
+  batch_size='auto',
+  learning_rate='constant',
+  learning_rate_init=0.001,
+  n_iter_no_change=10,
+  verbose=True
+)
+mlp.fit(xtrain, ytrain)
+mlp.score(xtest, ytest)
+```
+
+```{python}
+weights = 0
+for i in range(len(mlp.coefs_)):
+  
+  coefs = mlp.coefs_[i].size #.shape[0 as np.arrays]
+  bias = mlp.intercepts_[i].size
+  
+  tot = coefs+bias
+  
+  print(f"Layer {i} => Weights {coefs} Bias {bias} Totale {tot}")
+  
+  weights += tot
+
+print(f"Total coefficients of the NN {weights}")
+```
+
+```{python}
+ypred = mlp.predict(xtest)
+ytrue = ytest
+
+from sklearn.metrics import classification_report
+
+print(classification_report(ypred, ytrue, digits=2))
+```
+
+Lets check where the model is making mistakes.
+
+```{python}
+errors_mask = ypred != ytrue
+errors_mask.sum()
+```
+
+Just 10 mistakes.
+
+```{python}
+xerror = xtest[errors_mask]
+yerror = ytrue[errors_mask]
+yerror_pred = ypred[errors_mask]
+
+yerror = yerror.reset_index(drop=True)
+```
+
+```{python}
+plt.close()
+fig = plt.figure(figsize=(12, 12))
+fig.subplots_adjust(wspace=0)
+
+for i in range(xerror.shape[0]):
+  # iterate over n image
+  plot = fig.add_subplot(4, 5, i+1)
+  plt.imshow(xerror[i, :].reshape(8, 8))
+  plt.text(
+    0,
+    7,
+    f"Class {int(yerror[i])}",
+    fontsize=12,
+    fontdict={"weight":"bold"}
+    )
+  plt.text(
+    0,
+    6,
+    f"Pred {int(yerror_pred[i])}",
+    fontsize=12,
+    fontdict={"weight":"bold"}
+    )
+  plt.axis("off")
+
+plt.show()
+```
+
+But is the MLP the best solution?
+
+```{python}
+from sklearn.linear_model import LogisticRegression
+
+lr = LogisticRegression()
+lr.fit(xtrain, ytrain)
+lr.score(xtest, ytest)
+```
+
+Considering the result, it could seem a good result, but sometimes is not enough. For example, if used in an autonomous card, it would not be enough.
+
+
+
+
+
+
+
+
+
+
+
+

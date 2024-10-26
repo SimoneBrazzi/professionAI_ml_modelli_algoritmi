@@ -1,0 +1,187 @@
+---
+title: "DecisionTree"
+author: "Simone Brazzi"
+engine: knitr
+format:
+  html:
+    page-layout: full
+    toc: true
+    toc-depth: 3
+    toc-title: "Table of Contents"
+    toc_float:
+      collapsed: true
+      smooth_scroll: true
+    toc-location: left
+    toc-folding: hide
+    theme:
+      dark: "darkly"
+      light: "flatly"
+    code-copy: true
+    code-link: true
+    smooth_scroll: true
+    embed-resources: true
+    self-contained-math: true
+  ipynb: default
+format-links: [ipynb]
+self_contained: true
+number-sections: true
+editor: 
+  markdown: 
+    wrap: sentence
+editor_options: 
+  chunk_output_type: console
+---
+
+# Theory
+
+## Albero decisionale
+
+Albero decisionale binario con **punti di split** nelle variabili.
+
+
+Albero decisionale **binario**: ogni nodo ha solo 2 figli. Ogni nodo ha una variabile e una soglia che fa da split.
+
+Il dataset viene splittato ripetutamente fino ad un ondo senza figli, ossia una leaf.
+
+**Purezza** alta -> separa efficacemente i valori del target.
+**Purezza** bassa -> la divisione crea **miscele casuali**.
+
+Si cerca la **massima purezza**, ossia **bassa varianza** dei risultati.
+se il nodo figlio non è abbastanza puro, lo si può splittare ulteriormente.
+
+## Random Forest
+
+Modello ensemble basato su **alberi binari** e **bagging**.
+
+$$
+\underset{bootstrap\ sui\ record\ del\ training}{Bagging} + \underset{selezione\ casuale\ delle\ feature}{Alberi\ decisionali} = Random Forest
+$$
+
+Bagging -> resiste al trascorrere del tempo. Se la popolazione rimane la stessa, è già stato addestrato su dataset dellos tesso tipo.
+Gli alberi decisionali sono potenti per implementare relazioni non banali.
+
+In general, the most used hyperparameter are as little as possible comapred to the available.
+
+# Practice
+
+## Decisoin tree
+```{python}
+from sklearn.datasets import load_diabetes, load_iris
+from sklearn.tree import DecisionTreeRegressor, DecisionTreeClassifier
+from sklearn.model_selection import train_test_split
+```
+
+### Regression
+```{python}
+x, y = load_diabetes(return_X_y=True)
+xtrain, xtest, ytrain, ytest = train_test_split(
+  x,
+  y,
+  test_size=.3,
+  random_state=42
+)
+
+dtr = DecisionTreeRegressor(
+  # base hyperparameters
+  max_depth=5,
+  min_samples_split=4,
+  min_samples_leaf=3,
+  # useful additionals
+  max_features=3,
+  # if max_features is a number, it is a random selection, so random_state is needed
+  random_state=0
+)
+dtr.fit(xtrain, ytrain)
+dtr.predict(xtest)
+```
+
+### Classification
+```{python}
+x, y = load_iris(return_X_y=True)
+xtrain, xtest, ytrain, ytest = train_test_split(
+  x,
+  y,
+  test_size=.3,
+  random_state=42
+)
+dtc = DecisionTreeClassifier(
+  criterion="gini", # or "entropy", information gain
+  max_depth=5,
+  min_samples_split=4,
+  min_samples_leaf=3,
+  max_features=3,
+  random_state=0
+)
+dtc.fit(xtrain, ytrain)
+dtc.predict(xtest)
+dtc.predict_proba(xtest)
+```
+
+For each target it is calculated a probability.
+The column order depends on `dtc.classes_`.
+
+```{python}
+dtc.classes_
+```
+
+Hard voting: the most probable class.
+
+## Random Forest
+
+```{python}
+from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
+```
+
+### Regression
+
+```{python}
+x, y = load_diabetes(return_X_y=True)
+xtrain, xtest, ytrain, ytest = train_test_split(
+  x,
+  y,
+  test_size=.3,
+  random_state=42
+)
+
+rfr = RandomForestRegressor(
+  n_estimators=50,
+  max_features=.4,
+  max_depth=5,
+  min_samples_split=5,
+  random_state=0,
+  n_jobs=-1 # parallelize
+)
+rfr.fit(xtrain, ytrain)
+rfr.predict(xtest)
+```
+
+Random Forest is very powerful because it combines bagging and binary decisional trees or weak learner, increasing the performance.
+
+### Classification
+
+```{python}
+x, y = load_iris(return_X_y=True)
+xtrain, xtest, ytrain, ytest = train_test_split(
+  x,
+  y,
+  test_size=.3,
+  random_state=42
+)
+
+rfc = RandomForestClassifier(
+  n_estimators=100,
+  max_features=.8,
+  max_depth=5,
+  criterion="entropy",
+  min_samples_split=5,
+  random_state=0,
+  n_jobs=-1 # parallelize
+)
+rfc.fit(xtrain, ytrain)
+rfc.predict(xtest)
+rfc.predict_proba(xtest)
+```
+
+It works with a **soft voting**: sum of score of the weak learner and selection of the best class.
+
+It is slow, because there are lots of weak learner trained. Still it works well in reducing the variance and obtaing stable results.

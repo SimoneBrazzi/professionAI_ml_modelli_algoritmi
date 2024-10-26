@@ -1,0 +1,454 @@
+---
+title: "Nearest Neighbors"
+author: "Simone Brazzi"
+engine: knitr
+format:
+  html:
+    page-layout: full
+    toc: true
+    toc-depth: 3
+    toc-title: "Table of Contents"
+    toc_float:
+      collapsed: true
+      smooth_scroll: true
+    toc-location: left
+    toc-folding: hide
+    theme:
+      dark: "darkly"
+      light: "flatly"
+    code-copy: true
+    code-link: true
+    smooth_scroll: true
+    embed-resources: true
+    self-contained-math: true
+  ipynb: default
+format-links: [ipynb]
+self_contained: true
+number-sections: true
+editor: 
+  markdown: 
+    wrap: sentence
+editor_options: 
+  chunk_output_type: console
+---
+
+# Theory
+
+Super simple yet so effective!
+**Lazy models** and no parametrical. There are no assumptions about the data distribution. It overfits without learning from data, but memorizing it.
+
+**Proximity search**: get a predefined number of the **nearest** observations to a poin and guess the label. It is also called the post-office problem: find the nearest post office.
+
+Given a set S in a space M and a point $q \in M $, get the $s \in S$ nearest to q.
+
+## KNN or K-Nearest Neighbors
+
+Most popular and most used one. The predicted class is the one with the k observations nearest.
+**k** is an hyperparameter:
+
+- For higher k, less noise.
+- For lower k, clean decision boundaries.
+
+Process:
+
+- Choose k.
+- Choose a metric -> euclidean distance.
+- Search the k nearest to the observations we want to classify.
+- Assign the class with higher frequency in the nearest neighbors.
+- If there are multiple classes with the same frequency, it is assigned the class with the smallest total distance.
+
+[KNN example](knn_how_it_works.png)
+
+### PROs
+- Simple.
+- Flexible for new data.
+- Being not parametric, can deal with irregular decision boundaries.
+
+### CONs
+- Computational load for big datasets.
+- Outlier sensibility.
+- Interpretability.
+
+## Distance metrics
+
+### Euclidean distance
+
+$\sqrt{(x_1 - x_2)^2 + (y_1 - y_2)^2} $
+
+### Manhattan distance
+
+$\mid x_1 - x_2 \mid + \mid y_1 - y_2 \mid $
+
+The absolute value smooth big differences in the 2 dimensions, which are equally relevant
+
+### Minkowski
+
+$(\mid x_1 - x_2 \mid^p + \mid x_1 - x_2 \mid^p)^{\frac{1}{p}}$
+
+**p** lets control the weight to the greater differences. It is a general form of the Euclidean distance.
+
+If p = 1 it is the Manhattan distance.
+If p = 2 it is an Euclidean distance.
+
+## RNN Radius Nearest Neighbors
+
+It is used when the observations are **non uniformally** distributed.
+It focuses on a **radius R** instead of the number of observation.
+The predicted class is the one with the most observations in the radius R.
+
+**R** is an hyperparameter with same characteristcs as k.
+
+## KNN vs RNN
+
+- RNN is noise robust.
+- With a good K, KNN is more accurate.
+
+# Practice
+
+```{python}
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import log_loss, accuracy_score
+from sklearn.datasets import make_classification
+
+random_seed = 0
+```
+
+```{python}
+x, y = make_classification(
+  n_samples=100,
+  n_features=2,
+  n_informative=2,
+  n_redundant=0,
+  n_repeated=0,
+  n_classes=2,
+  random_state=random_seed
+)
+
+plt.close()
+plt.scatter(x[:, 0], x[:, 1], c=y)
+plt.show()
+```
+
+```{python}
+xtrain, xtest, ytrain, ytest = train_test_split(
+  x,
+  y,
+  test_size=.3,
+  random_state=random_seed
+)
+```
+
+
+## KNN
+
+```{python}
+from sklearn.neighbors import KNeighborsClassifier
+```
+
+```{python}
+Ks = [1, 2, 3, 4, 5, 10, 12, 15, 20, 30, 40, 50]
+
+for k in Ks:
+  
+  print(f"k:{k}")
+  knn = KNeighborsClassifier(
+    n_neighbors=k
+    )
+  knn.fit(xtrain, ytrain)
+  ypred_train = knn.predict(xtrain)
+  yproba_train = knn.predict_proba(xtrain)
+  ypred_test = knn.predict(xtest)
+  yproba_test = knn.predict_proba(xtest)
+  
+  accuracy_train = accuracy_score(ytrain, ypred_train)
+  accuracy_test = accuracy_score(ytest, ypred_test)
+  
+  log_loss_train = log_loss(ytrain, yproba_train)
+  log_loss_test = log_loss(ytest, yproba_test)
+  
+  print(f"ACCURACY: TRAIN:{accuracy_train:.3f} TEST:{accuracy_test:.3f}")
+  print(f"LOG LOSS: TRAIN{log_loss_train:.3f} TEST{log_loss_test:.3f}")
+  print("\n")
+  
+```
+
+The best omdel seems with k = 10.
+
+```{python}
+knn = KNeighborsClassifier(
+    n_neighbors=10
+    )
+knn.fit(xtrain, ytrain)
+
+x0 = [0, 0]
+ypred = knn.predict([x0])
+ypred
+```
+
+For the poin (0, 0), for this model it is yellow class.
+
+Let see the neighbors.
+
+```{python}
+knn.kneighbors([x0])
+```
+
+These are 2 `np.array`: one is the distance, the other the index of the neighbors in xtrain.
+
+```{python}
+distance, neighbors = knn.kneighbors([x0])
+
+neighbors[0]
+```
+
+```{python}
+x_neighbors = xtrain[neighbors[0]]
+x_neighbors
+```
+
+These are the (x, y) coordinates for each neighbors.
+
+```{python}
+plt.close()
+plt.scatter(x[:, 0], x[:, 1], c=y)
+plt.scatter(x0[0], x0[1], c="green")
+plt.scatter(x_neighbors[:, 0], x_neighbors[:, 1], facecolor="none", edgecolor="red")
+plt.show()
+```
+
+The red circled ones are the neighbors of the green observation.
+
+```{python}
+knn.predict_proba([x0])
+```
+
+9 out of 10 are yellow class, 1 out of 10 is of the purple one.
+
+## RNN
+
+Using the RNN requires to normalize the data, because the features are used on a common scale.
+
+```{python}
+mms = MinMaxScaler()
+xtrain = mms.fit_transform(xtrain)
+xtest = mms.transform(xtest)
+xtrain.min(), xtest.min()
+```
+
+```{python}
+from sklearn.neighbors import RadiusNeighborsClassifier
+
+Rs = [.2, .3, .4, .5, .6, .7, .8, .9, 1]
+
+for r in Rs:
+  
+  print(f"r:{r}")
+  rnn = RadiusNeighborsClassifier(
+    radius=r
+    )
+  rnn.fit(xtrain, ytrain)
+  ypred_train = rnn.predict(xtrain)
+  yproba_train = rnn.predict_proba(xtrain)
+  ypred_test = rnn.predict(xtest)
+  yproba_test = rnn.predict_proba(xtest)
+  
+  accuracy_train = accuracy_score(ytrain, ypred_train)
+  accuracy_test = accuracy_score(ytest, ypred_test)
+  
+  log_loss_train = log_loss(ytrain, yproba_train)
+  log_loss_test = log_loss(ytest, yproba_test)
+  
+  print(f"ACCURACY: TRAIN:{accuracy_train:.3f} TEST:{accuracy_test:.3f}")
+  print(f"LOG LOSS: TRAIN{log_loss_train:.3f} TEST{log_loss_test:.3f}")
+  print("\n")
+```
+
+r = .2 is already a good result.
+
+```{python}
+r = .2
+rnn = RadiusNeighborsClassifier(radius=r)
+rnn.fit(xtrain, ytrain)
+
+ypred = rnn.predict([x0])
+ypred
+```
+
+Doing so, the model return the same observation to the purple class! Lets plot the radius.
+
+:::{.callout.note}
+We are going to use the xtrain and ytrain, which are normalized, so we can plot the circle in the proper scale.
+:::
+
+```{python}
+plt.close()
+fig, ax = plt.subplots()
+
+ax.scatter(xtrain[:, 0], xtrain[:, 1], c=ytrain)
+ax.scatter(x0[0], x0[1], c="green")
+
+circle = plt.Circle((x0[0], x0[1]), r, color="r", fill=None)
+ax.add_patch(circle)
+
+plt.show()
+```
+
+```{python}
+rnn.predict_proba([x0])
+```
+
+The model is 100% sure the class is purple.
+
+:::{.callout-warning}
+There is an error! x0 should be normalized!!! Lets do it!
+:::
+
+Transform return an array of observations, while transform a bidimensional array.
+```{python}
+x_mms = mms.transform([x0])
+ypred = rnn.predict(x_mms)
+ypred
+x_mms.shape
+```
+
+
+```{python}
+plt.close()
+fig, ax = plt.subplots()
+
+ax.scatter(xtrain[:, 0], xtrain[:, 1], c=ytrain)
+ax.scatter(x_mms[:, 0], x_mms[:, 1], c="green")
+
+circle = plt.Circle((x_mms[:, 0], x_mms[:, 1]), r, color="r", fill=None)
+ax.add_patch(circle)
+
+plt.show()
+```
+
+Now the area is bigger, but the probability of yellow class is lower. Still, it is done correclty, because it is normalized. The RNN works better when there are different area with low density or non uniform distributed datasets.
+
+```{python}
+rnn.predict_proba(x_mms)
+```
+
+# Exercise
+
+Face Recognition model using Olivetti Faces Dataset.
+
+## Dataset
+```{python}
+from sklearn.datasets import fetch_olivetti_faces
+```
+
+```{python}
+df = fetch_olivetti_faces()
+x = df.images
+y = df.target
+```
+
+From de description:
+"There are ten different images of each of 40 distinct subjects. For some subjects, the images were taken at different times, varying the lighting, facial expressions (open/closed eyes, smiling/not smiling) and facial details (glasses / no glasses). All the images were taken against a dark homogeneous background with the subjects in an upright, frontal position (with tolerance for some side movement).
+The image is quantized to 256 grey levels and stored as unsigned 8-bit integers; the loader will convert these to floating point values on the interval [0, 1], which are easier to work with for many algorithms. The "target" for this database is an integer from 0 to 39 indicating the identity of the person pictured; however, with only 10 examples per class, this relatively small dataset is more interesting from an unsupervised or semi-supervised perspective.
+
+Little check if the features are normalized.
+```{python}
+x.min()
+x.max()
+
+df.data.shape
+x.shape
+y.shape
+64 * 64
+
+np.unique(y, return_counts=True)
+
+x[0].shape
+```
+
+## Plot
+```{python}
+plt.close()
+plt.imshow(x[71], cmap="gray")
+plt.show()
+```
+
+## Model
+```{python}
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.neighbors import KNeighborsClassifier, RadiusNeighborsClassifier
+from sklearn.model_selection import StratifiedKFold, GridSearchCV
+from sklearn.metrics import classification_report
+from sklearn.model_selection import train_test_split
+
+x_flat = x.reshape(x.shape[0], -1)
+
+xtrain, xtest, ytrain, ytest = train_test_split(
+  x_flat, 
+  y,
+  test_size=.3,
+  random_state=42,
+  stratify=y
+)
+# check if there are missing classes between ytrain and ytest
+np.sum(1-np.isin(ytrain, ytest))
+
+mms = MinMaxScaler()
+xtrain = mms.fit_transform(xtrain)
+xtest = mms.transform(xtest)
+
+param_grid = {
+  "n_neighbors" : [1, 2, 3, 4, 5, 10, 12, 15, 20, 30, 40, 50]
+}
+knn = KNeighborsClassifier()
+grid_search = GridSearchCV(
+  knn,
+  param_grid,
+  cv=5,
+  scoring="accuracy",
+  n_jobs=-1
+)
+
+grid_search.fit(xtrain, ytrain)
+
+print("Best parameters:", grid_search.best_params_)
+print("Best cross-validation score:", grid_search.best_score_)
+
+# Use the best model to make predictions
+best_knn = grid_search.best_estimator_
+ypred_train = best_knn.predict(xtrain)
+yproba_train = best_knn.predict_proba(xtrain)
+ypred_test = best_knn.predict(xtest)
+yproba_test = best_knn.predict_proba(xtest)
+
+# Calculate and print metrics
+accuracy_train = accuracy_score(ytrain, ypred_train)
+accuracy_test = accuracy_score(ytest, ypred_test)
+log_loss_train = log_loss(ytrain, yproba_train)
+log_loss_test = log_loss(ytest, yproba_test)
+
+print(f"K: {best_knn}")
+print(f"ACCURACY: TRAIN:{accuracy_train:.3f} TEST:{accuracy_test:.3f}")
+print(f"LOG LOSS: TRAIN:{log_loss_train:.3f} TEST:{log_loss_test:.3f}")
+```
+
+Considering it is clearly overfitting, we will use another k.
+
+```{python}
+results = grid_search.cv_results_
+for mean_score, params in zip(results['mean_test_score'], results['params']):
+    print(f"Mean test score: {mean_score:.3f} - Parameters: {params}")
+```
+
+```{python}
+knn = KNeighborsClassifier(n_neighbors=3)
+knn.fit(xtrain, ytrain)
+knn.score(xtest, ytest)
+ypred = knn.predict(xtest)
+print(classification_report(ytest, ypred))
+```
+
+
